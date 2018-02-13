@@ -5,30 +5,29 @@
 
 int main(){
 
-	int nb_nb = 1000;
-	bool prime[nb_nb];
+	int nb = 1000;
+	bool prime[nb];
 	int prime_counter=0;
-	omp_set_num_threads(nb_nb);
+	omp_set_num_threads(nb);
 	#pragma omp parallel
 	{
 		prime[omp_get_thread_num()]=true;
 	}
-	int maxsteps = sqrt(nb_nb)+1;
+	int maxsteps = sqrt(nb)+1;
 	for(int i=2; i<maxsteps; i++){
 		if(prime[i]){
-			omp_set_num_threads(nb_nb/i);
 			#pragma omp parallel
-			{
-				prime[i*(omp_get_thread_num()+2)]=false;
+			for(int j=0; i*(j+2)<nb; j++){
+				prime[i*(j+2)]=false;//Tous les multiples de i à partir de 2x
 			}
 			prime_counter++;
-			printf("%d, ",i);	
+			printf("%d, ",i);
 		}
 	}
-	for(int i=maxsteps; i<nb_nb; i++){
+	for(int i=maxsteps; i<nb; i++){
 		if(prime[i]){
 			prime_counter++;
-			printf("%d, ",i);	
+			printf("%d, ",i);
 		}
 	}
 	printf("\nnb primes :%d\n",prime_counter);
