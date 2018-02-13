@@ -1,0 +1,1 @@
+ur1shell: ./configure: Aucun fichier ou dossier de ce type

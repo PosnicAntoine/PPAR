@@ -1,0 +1,20 @@
+# this gives access to the mpich header files
+prefix=/private/student/7/17/15006817/Documents/M1/PPAR/mpich-3.2.1/home
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: mpich
+Description: High Performance and portable MPI
+Version: 3.2.1
+URL: http://www.mcs.anl.gov/research/projects/mpich
+Requires:
+Libs: -Wl,-rpath -Wl,${exec_prefix}/lib  -L${libdir} -lmpi    -lrt -lpthread 
+Cflags:   -I${includedir}
+
+# pkg-config does not understand Cxxflags, etc. So we allow users to
+# query them using the --variable option
+
+cxxflags=  -I${includedir}
+fflags= -I${includedir}
+fcflags= -I${includedir}
