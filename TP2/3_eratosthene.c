@@ -5,7 +5,7 @@
 
 int main(){
 
-	int nb = 1000;
+	int nb = 2000;
 	bool prime[nb];
 	int prime_counter=0;
 	omp_set_num_threads(nb);
