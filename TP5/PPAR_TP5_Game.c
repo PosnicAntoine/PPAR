@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include <mpi.h>
 
 int N = 32;
 int itMax = 200;
@@ -215,6 +216,7 @@ void print(unsigned int *world){
     sleep(1);
 }
 
+
 // main
 int main(int argc,char *argv[]){
     int it,change;
@@ -223,19 +225,62 @@ int main(int argc,char *argv[]){
 
     // getting started
     //world1 = initialize_dummy();
-    world1 = initialize_random();
-    //world1 = initialize_glider();
+    //world1 = initialize_random();
+    world1 = initialize_glider();
     //world1 = initialize_small_exploder();
     world2 = allocate();
     print(world1);
 
     it = 0;  change = 1;
+
+    int myrank;
+    int nb_processes;
+
+    MPI_Init(&argc, &argv);
+    MPI_Status status; MPI_Request request;
+    MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+    if(N%nb_processes!=0){
+        printf("Erreur, taille de tableau non divisible par %d processes",N);
+        exit(-1);
+    }
+    int step_size = (int) N/nb_processes;
+    if(myrank==0){
+        MPI_Comm_size(MPI_COMM_WORLD,&nb_processes);
+        MPI_Bcast(world1, N*N, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+        MPI_Bcast(world2, N*N, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+    }else{
+        MPI_Recv(world1, N*N, MPI_UNSIGNED, 0, 0, MPI_COMM_WORLD, &status);
+        MPI_Recv(world2, N*N, MPI_UNSIGNED, 0, 0, MPI_COMM_WORLD, &status);
+    }
+
     while (change && it < itMax){
-        change = newgeneration(world1,world2,0,N);
-        worldaux = world1;  world1 = world2;  world2 = worldaux;
-        print(world1);
+        change = newgeneration(world1,world2,myrank*step_size,(myrank+1)*step_size);
+        //Envoi au process précédent (rebouclage si négatif)
+        MPI_Isend(world2+myrank*step_size, N*step_size,MPI_UNSIGNED, (myrank+nb_processes-1)%nb_processes,myrank,MPI_COMM_WORLD, &request);
+        //Envoi au process suivant (rebouclage si positif)
+        MPI_Isend(world2+myrank*step_size, N*step_size,MPI_UNSIGNED, (myrank+nb_processes+1)%nb_processes,myrank,MPI_COMM_WORLD, &request);
+        //Envoi au process 0 pour print
+        MPI_Isend(world2+myrank*step_size, N*step_size,MPI_UNSIGNED, 0,myrank,MPI_COMM_WORLD, &request);
+
+        //Réception du process précédent (rebouclage si négatif)
+        MPI_Recv(world2+myrank*step_size, N*step_size,MPI_UNSIGNED, (myrank+nb_processes-1)%nb_processes,myrank,MPI_COMM_WORLD, &status);
+        //Réception du process suivant (rebouclage si négatif)
+        MPI_Recv(world2+myrank*step_size, N*step_size,MPI_UNSIGNED, (myrank+nb_processes+1)%nb_processes,myrank,MPI_COMM_WORLD, &status);
+
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        if(myrank==0){
+            for(int i=1; i<nb_processes; i++){
+                MPI_Recv(world2+myrank*step_size, N*step_size,MPI_UNSIGNED, i,myrank,MPI_COMM_WORLD, &status);
+            }
+            print(world2);
+        }
+        worldaux = world1;  world1 = world2;  world2 = worldaux;//Switche w1 et w2
         it++;
     }
+
+    MPI_Finalize();
+
 
     // ending
     free(world1);   free(world2);
