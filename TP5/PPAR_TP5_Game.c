@@ -269,29 +269,29 @@ int main(int argc,char *argv[]){
 
     while (change && it < itMax){
         change = newgeneration(world1,world2,myrank*step_size,(myrank+1)*step_size);
+        MPI_Barrier(MPI_COMM_WORLD);
         //Envoi au process précédent (rebouclage si négatif)
-        MPI_Isend(world2+myrank*step_size, N*step_size,MPI_UNSIGNED, (myrank+nb_processes-1)%nb_processes,myrank,MPI_COMM_WORLD, &request);
+        MPI_Isend(world2+myrank*step_size, step_size, MPI_UNSIGNED, (myrank+nb_processes-1)%nb_processes,myrank,MPI_COMM_WORLD, &request);
         //Réception du process suivant (rebouclage si négatif)
-        MPI_Irecv(world2+myrank*step_size, N*step_size,MPI_UNSIGNED, (myrank+nb_processes+1)%nb_processes,myrank,MPI_COMM_WORLD, &request);
+        MPI_Irecv(world2+myrank*step_size, step_size, MPI_UNSIGNED, (myrank+nb_processes+1)%nb_processes,myrank,MPI_COMM_WORLD, &request);
 
         //Envoi au process suivant (rebouclage si positif)
-        MPI_Isend(world2+myrank*step_size, N*step_size,MPI_UNSIGNED, (myrank+nb_processes+1)%nb_processes,myrank,MPI_COMM_WORLD, &request);
+        MPI_Isend(world2+myrank*step_size, step_size, MPI_UNSIGNED, (myrank+nb_processes+1)%nb_processes,myrank,MPI_COMM_WORLD, &request);
 
         //Réception du process précédent (rebouclage si négatif)
-        MPI_Irecv(world2+myrank*step_size, N*step_size,MPI_UNSIGNED, (myrank+nb_processes-1)%nb_processes,myrank,MPI_COMM_WORLD, &request);
+        MPI_Irecv(world2+myrank*step_size, step_size, MPI_UNSIGNED, (myrank+nb_processes-1)%nb_processes,myrank,MPI_COMM_WORLD, &request);
 
         MPI_Barrier(MPI_COMM_WORLD);
         printf("proccess %d après barrière \n",myrank);
 
         //Envoi au process 0 pour print
-        if(myrank!=0){
-            MPI_Isend(world2+myrank*step_size, step_size, MPI_UNSIGNED, 0, 0, MPI_COMM_WORLD, &request);
-        }else{
+        if(myrank==0){
             for(int i=1; i<nb_processes; i++){
                 MPI_Irecv(world2+i*step_size, step_size, MPI_UNSIGNED, i, 0, MPI_COMM_WORLD, &request);
             }
-
             print(world2);
+        }else{
+            MPI_Isend(world2+myrank*step_size, step_size, MPI_UNSIGNED, 0, 0, MPI_COMM_WORLD, &request);
         }
 
         MPI_Barrier(MPI_COMM_WORLD);
